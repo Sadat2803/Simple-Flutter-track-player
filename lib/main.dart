@@ -15,7 +15,7 @@ class myApp extends StatelessWidget
   Widget build (BuildContext context)
   {
     return new MaterialApp(
-      title : "SADAT-Flutter-PLayer",
+      title : "إقرأ",
       theme : new ThemeData(
         primarySwatch: Colors.blue
       ),
@@ -36,9 +36,9 @@ class Home extends StatefulWidget
 class _Home extends State<Home>{
 
   List<SoundTrack> soundTracksList = [
-    new SoundTrack("El Maikli - El fatiha", 'El muaikly', 'assets/img/m.png', 'assets/sound_tracks/m.mp3'),
-    new SoundTrack("Al Afasy- El fatiha", 'Al Afasy', 'assets/img/a.png', 'assets/sound_tracks/a.mp3'),
-    new SoundTrack("El Ghamidi - El fatiha", 'El Ghamidi', 'assets/img/g.png', 'assets/sound_tracks/g.mp3'),
+    new SoundTrack("El Maikli - El fatiha", 'El muaikly', 'assets/img/m.png', 'https://server12.mp3quran.net/maher/001.mp3'),
+    new SoundTrack("Al Afasy- El fatiha", 'Al Afasy', 'assets/img/a.png', 'https://server8.mp3quran.net/afs/001.mp3'),
+    new SoundTrack("El Ghamidi - El fatiha", 'El Ghamidi', 'assets/img/g.png', 'https://server7.mp3quran.net/s_gmd/001.mp3'),
   ];
 
   AudioPlayer audioPlayer ;
@@ -53,22 +53,26 @@ class _Home extends State<Home>{
   bool muted = false;
   int maxVol = 0;
   int currentVol = 0;
+
   @override
   void initState()
   {
+    print("hi");
     super.initState();
     currentSoundTrack = soundTracksList[index];
+    audioPlayer = new AudioPlayer();
     configAudioPlayer();
     initPlatformState();
     updateVolume();
   }
+  @override
   Widget build (BuildContext context)
-  {
+  {double width = MediaQuery.of(context).size.width;
     return Scaffold(
      backgroundColor: Colors.white,
      appBar: new AppBar(
-       title : new Text("SADAT Track Player"),
-       backgroundColor: Colors.blueGrey,
+       title : new Text("إقرأ"),
+       backgroundColor: Colors.green,
        leading : new Icon(Icons.library_music),
        centerTitle: true,
        elevation: 30
@@ -78,9 +82,9 @@ class _Home extends State<Home>{
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             new Container(
-              width : 200,
+              width : 250,
               margin: EdgeInsets.only(top : 20),
-              child: Image.asset(currentSoundTrack.imagePath),
+              child: Image.asset(currentSoundTrack.imagePath,scale: 0.5),
             ),
             new Container(
               margin: EdgeInsets.only(top : 20),
@@ -95,6 +99,24 @@ class _Home extends State<Home>{
               child: Text(
                 currentSoundTrack.author,
               ),
+            ),
+            new Container(
+              height: width / 5,
+              margin : EdgeInsets.only(left: 10.0, right : 10.0 ),
+              child : new Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  new IconButton(icon: new Icon(Icons.fast_rewind), onPressed: rewind),
+                  new IconButton(
+                      icon: (playerStatus != PlayerState.PLAYING ) ? new Icon(Icons.play_arrow) : new Icon(Icons.pause),
+                      onPressed : (playerStatus != PlayerState.PLAYING ) ? play : pause
+                  ),
+                  new IconButton(icon: (!muted) ? new Icon(Icons.headset) : new Icon(Icons.headset_off),
+                      onPressed: mute),
+                  new IconButton(icon: new Icon(Icons.fast_forward), onPressed: forward)
+                ],
+              )
+
             )
           ],
         )
@@ -111,10 +133,29 @@ class _Home extends State<Home>{
         fontSize : 15
     ));
   }
-  IconButton button(IconData )
+
+  IconButton bouton(IconData icon, double size, ActionSoundTrack action)
+  {
+    new IconButton(
+        icon: new Icon(icon),
+        iconSize: size,
+        color: Colors.white,
+        onPressed: ()
+        {
+          switch(action)
+          {
+            case ActionSoundTrack.PLAY:
+              play();
+              break;
+            case ActionSoundTrack.PAUSE:
+              pause();
+              break;
+          }
+        }
+    );
+  }
   void configAudioPlayer()
   {
-    audioPlayer = new AudioPlayer();
     positionSubscription = audioPlayer.onAudioPositionChanged.listen((pos) {
       setState(() {
         position = pos;
@@ -122,11 +163,10 @@ class _Home extends State<Home>{
       if(position>= duration)
         {
           position = new Duration(seconds: 0);
-          //PASSER A LA TRACK SUIVANTE
         }
     });
     stateSubscription = audioPlayer.onPlayerStateChanged.listen((state) {
-      if(state == AudioPlayerState.PLAYING)
+      if(state == "AudioPlayerState.PLAYING")
         {
           duration = audioPlayer.duration;
         }else if(state == AudioPlayerState.STOPPED)
@@ -138,9 +178,9 @@ class _Home extends State<Home>{
                 {
                   setState(()
                   {
-                  playerStatus =  PlayerState.STOPPED;
-                  duration = new Duration(seconds: 0);
-                  position = new Duration(seconds: 0);
+                    playerStatus =  PlayerState.STOPPED;
+                    duration = new Duration(seconds: 0);
+                    position = new Duration(seconds: 0);
                   });
                 }
     );
@@ -158,9 +198,8 @@ class _Home extends State<Home>{
    updateVolume() async
   {
     maxVol = await Volume.getMaxVol;
-    currentVol = await Volume.getVol;
     setState(() {
-      
+      currentVol = ((maxVol * 75.0 )/ 100.0).toInt();
     });
   }
 
@@ -194,12 +233,29 @@ class _Home extends State<Home>{
   }
   void forward()
   {
-
+    index++;
+    if(index>=soundTracksList.length)
+      {
+        index = 0;
+      }
+      audioPlayer.stop();
+      currentSoundTrack = soundTracksList[index];
+      configAudioPlayer();
+      play();
   }
   void rewind()
   {
-
+    index--;
+    if(index<0)
+    {
+      index = soundTracksList.length - 1 ;
+    }
+    audioPlayer.stop();
+    currentSoundTrack = soundTracksList[index];
+    configAudioPlayer();
+    play();
   }
+
   String fromDuration()
   {
     return duration.toString().split('.').first;
@@ -208,7 +264,7 @@ class _Home extends State<Home>{
 enum ActionSoundTrack {
   PLAY,
   PAUSE,
-  FORWAR,
+  FORWARD,
   REWIND
 }
 enum PlayerState {
