@@ -61,6 +61,7 @@ class _Home extends State<Home>{
     super.initState();
     currentSoundTrack = soundTracksList[index];
     audioPlayer = new AudioPlayer();
+    duration = audioPlayer.duration;
     configAudioPlayer();
     initPlatformState();
     updateVolume();
@@ -69,57 +70,131 @@ class _Home extends State<Home>{
   Widget build (BuildContext context)
   {double width = MediaQuery.of(context).size.width;
     return Scaffold(
+
      backgroundColor: Colors.white,
      appBar: new AppBar(
        title : new Text("إقرأ"),
        backgroundColor: Colors.green,
        leading : new Icon(Icons.library_music),
        centerTitle: true,
-       elevation: 30
+       elevation: 30,
      ),
-      body:  Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            new Container(
-              width : 250,
-              margin: EdgeInsets.only(top : 20),
-              child: Image.asset(currentSoundTrack.imagePath,scale: 0.5),
-            ),
-            new Container(
-              margin: EdgeInsets.only(top : 20),
-              child: Text(
-                currentSoundTrack.title,
-                textScaleFactor: 2,
-                style: TextStyle(color: Colors.black ),
+      body:  SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              new Container(
+                margin: EdgeInsets.only(top : 20),
+                child: Image.asset(currentSoundTrack.imagePath,scale: 1),
               ),
-            ),
-            new Container(
-              margin: EdgeInsets.only(top : 10),
-              child: Text(
-                currentSoundTrack.author,
+              new Container(
+                margin: EdgeInsets.only(top : 20),
+                child: Text(
+                  currentSoundTrack.title,
+                  textScaleFactor: 2,
+                  style: TextStyle(color: Colors.black ),
+                ),
               ),
-            ),
-            new Container(
-              height: width / 5,
-              margin : EdgeInsets.only(left: 10.0, right : 10.0 ),
-              child : new Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  new IconButton(icon: new Icon(Icons.fast_rewind), onPressed: rewind),
-                  new IconButton(
-                      icon: (playerStatus != PlayerState.PLAYING ) ? new Icon(Icons.play_arrow) : new Icon(Icons.pause),
-                      onPressed : (playerStatus != PlayerState.PLAYING ) ? play : pause
-                  ),
-                  new IconButton(icon: (!muted) ? new Icon(Icons.headset) : new Icon(Icons.headset_off),
-                      onPressed: mute),
-                  new IconButton(icon: new Icon(Icons.fast_forward), onPressed: forward)
-                ],
-              )
+              new Container(
+                margin: EdgeInsets.only(top : 10),
+                child: Text(
+                  currentSoundTrack.author,
+                ),
+              ),
 
-            )
-          ],
-        )
+              new Container(
+                height: width / 5,
+                margin : EdgeInsets.only(left: 10.0, right : 10.0 ),
+                child : new Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    new IconButton(icon: new Icon(Icons.fast_rewind), onPressed: rewind),
+                    new IconButton(
+                        icon: (playerStatus != PlayerState.PLAYING ) ? new Icon(Icons.play_arrow) : new Icon(Icons.pause),
+                        onPressed : (playerStatus != PlayerState.PLAYING ) ? play : pause
+                    ),
+                    new IconButton(icon: (!muted) ? new Icon(Icons.headset) : new Icon(Icons.headset_off),
+                        onPressed: mute),
+                    new IconButton(icon: new Icon(Icons.fast_forward), onPressed: forward)
+                  ],
+                )
+
+              ),
+              new Container(
+                  margin : EdgeInsets.only(left: 20.0, right : 20.0 ),
+                  child : new Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      textWithStyle(fromDuration(position), 0.8),
+                      textWithStyle(fromDuration(duration), 0.8),
+                    ],
+                  )
+              ),
+              new Container(
+                  margin : EdgeInsets.only(left: 20.0, right : 20.0 ),
+                  child : new Slider(
+                    min: 0.0,
+                    max : duration.inSeconds.toDouble(),
+                    value: position.inSeconds.toDouble(),
+                    inactiveColor: Colors.grey[500],
+                    activeColor: Colors.lightGreen,
+                    onChanged: (double d)
+                    {
+                      setState(() {
+                        audioPlayer.seek(d);
+                      });
+                    },
+                  )
+              ),
+              new Container(
+                height: width /5,
+                margin: EdgeInsets.only(left: 5.0,right: 5.0),
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    new IconButton(
+                        icon: new Icon(Icons.remove),
+                        iconSize: 18,
+                        onPressed: () {
+                          if (!muted) {
+                            if (currentVol - 1 >= 0) {
+                              setState(() {
+                                currentVol = currentVol - 1;
+                              });
+                              setVolume(currentVol);
+                            }
+                            else {
+                              setVolume(0);
+                            }
+                          }
+                        }
+                    ),
+                    new Text((muted) ? 'mute' : getVolumePercentage().toString().split('.').first + '%'),
+                    new IconButton(
+                        icon: new Icon(Icons.add),
+                        iconSize: 18,
+                        onPressed: (){
+                            if(!muted)
+                            {
+                              if(currentVol + 1 <= maxVol)
+                                {
+                                  setState(() { currentVol = currentVol + 1;});
+                                  setVolume(currentVol);
+                                }
+                              else
+                                {
+                                  setVolume(maxVol);
+                                }
+                            }
+                          }
+                    )
+                  ],
+                ),
+              )
+            ],
+          )
+        ),
       ),
     );
   }
@@ -162,11 +237,11 @@ class _Home extends State<Home>{
       });
       if(position>= duration)
         {
-          position = new Duration(seconds: 0);
+            position = new Duration(seconds: 0);
         }
     });
     stateSubscription = audioPlayer.onPlayerStateChanged.listen((state) {
-      if(state == "AudioPlayerState.PLAYING")
+      if(state == AudioPlayerState.PLAYING)
         {
           duration = audioPlayer.duration;
         }else if(state == AudioPlayerState.STOPPED)
@@ -205,7 +280,7 @@ class _Home extends State<Home>{
 
    setVolume(int i) async
   {
-     await Volume.setVol(i);
+    await Volume.setVol(i);
   }
 
   Future play() async
@@ -234,12 +309,14 @@ class _Home extends State<Home>{
   void forward()
   {
     index++;
-    if(index>=soundTracksList.length)
+    if(index >= soundTracksList.length)
       {
         index = 0;
       }
       audioPlayer.stop();
-      currentSoundTrack = soundTracksList[index];
+      setState(() {
+        currentSoundTrack = soundTracksList[index];
+      });
       configAudioPlayer();
       play();
   }
@@ -256,7 +333,7 @@ class _Home extends State<Home>{
     play();
   }
 
-  String fromDuration()
+  String fromDuration(duration)
   {
     return duration.toString().split('.').first;
   }
